@@ -1,0 +1,41 @@
+{
+  "name": "mcp-bevy-buddy",
+  "version": "0.0.1",
+  "description": "",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "bevy-buddy": "./build/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "start": "node dist/index.js",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm run build && changeset publish"
+  },
+  "author": "Blackjack200",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blackjack200/mcp-bevy-buddy.git"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Blackjack200/mcp-bevy-buddy/issues"
+  },
+  "homepage": "https://github.com/Blackjack200/mcp-bevy-buddy#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.21.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3"
+  }
+}

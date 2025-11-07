@@ -1,7 +1,7 @@
 {
   "name": "mcp-bevy-buddy",
   "version": "0.0.1",
-  "description": "",
+  "description": "Local Bevy helper that reads Cargo.toml and examples from local registry",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,7 +32,9 @@
   },
   "homepage": "https://github.com/Blackjack200/mcp-bevy-buddy#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.21.1"
+    "@modelcontextprotocol/sdk": "^1.21.1",
+    "toml": "^3.0.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",

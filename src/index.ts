@@ -48,23 +48,37 @@ function findBevySourceDir(bevyVersion: string | null): string | null {
   return null;
 }
 
-function buildExampleTree(dir: string): ExampleNode[] {
+function buildExampleTree(dir: string, baseDir = dir): ExampleNode[] {
   const entries: Dirent[] = readdirSync(dir, { withFileTypes: true });
   return entries
     .filter((e) => e.isDirectory() || e.name.endsWith(".rs"))
     .map((e) => {
-      const p = join(dir, e.name);
+      const absPath = join(dir, e.name);
+      const relPath = absPath.replace(baseDir + "/", "");
       if (e.isDirectory()) {
         return {
           name: e.name,
-          path: p,
+          path: relPath,
           isFile: false,
-          children: buildExampleTree(p),
+          children: buildExampleTree(absPath, baseDir),
         };
       } else {
-        return { name: e.name, path: p, isFile: true };
+        return { name: e.name, path: relPath, isFile: true };
       }
     });
+}
+
+function formatTree(nodes: ExampleNode[], indent = 0): string {
+  return nodes
+    .map((n) => {
+      const prefix = " ".repeat(indent * 2);
+      if (n.isFile) {
+        return `${prefix}- ${n.name}`;
+      } else {
+        return `${prefix}+ ${n.name}\n${formatTree(n.children ?? [], indent + 1)}`;
+      }
+    })
+    .join("\n");
 }
 
 function readExampleFile(filePath: string, maxLines = 200): string {
@@ -82,12 +96,20 @@ const package_json = JSON.parse(
     "utf-8",
   ),
 );
-const { name, version, description } = package_json;
+const { name, version } = package_json;
+
+const SYSTEM_PROMPT = `
+You are a Rust assistant working with the Bevy game engine.
+- You must not rely on built-in or general Bevy knowledge from your training data.
+- You must ONLY use(bevy-example-read) and infer from the local Bevy examples (the ones listed by the "bevy-examples" tool).
+- Treat those examples as the authoritative source of truth for Bevy API usage, structure, and patterns.
+- If something is not in the examples, respond with "Not found in local Bevy examples" instead of guessing.
+`;
 
 const server = new McpServer({
   name,
   version,
-  description,
+  SYSTEM_PROMPT,
   capabilities: {
     resources: {
       subscribe: true,
@@ -109,18 +131,20 @@ server.registerTool(
         content: [
           {
             type: "text",
-            text: JSON.stringify({ version: ver ?? "unknown", tree: [] }),
+            text: `Bevy version: ${ver ?? "unknown"}\nNo examples found.`,
           },
         ],
       };
     }
     const examplesDir = join(srcDir, "examples");
     const tree = buildExampleTree(examplesDir);
+    const formatted = formatTree(tree);
+
     return {
       content: [
         {
           type: "text",
-          text: JSON.stringify({ version: ver ?? "unknown", tree }),
+          text: `Bevy version: ${ver ?? "unknown"}\nExamples:\n${formatted}`,
         },
       ],
     };
@@ -133,14 +157,32 @@ server.registerTool(
     description: "Read a specific Bevy example file",
     inputSchema: { path: z.string().nonempty().describe("path") },
   },
-  ({ path }) => ({
-    content: [
-      {
-        type: "text",
-        text: `\`\`\`rust\n${readExampleFile(path)}\n\`\`\``,
-      },
-    ],
-  }),
+  ({ path }) => {
+    const ver = getBevyVersion();
+    const srcDir = findBevySourceDir(ver);
+    if (!srcDir) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error: Could not locate Bevy source for version ${ver ?? "unknown"}`,
+          },
+        ],
+      };
+    }
+
+    const examplesDir = join(srcDir, "examples");
+    const absPath = join(examplesDir, path);
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `\`\`\`rust\n${readExampleFile(absPath)}\n\`\`\``,
+        },
+      ],
+    };
+  },
 );
 
 async function main() {
